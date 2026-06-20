@@ -1,0 +1,51 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Users: only the owner can read/write their own profile
+    match /users/{uid} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+    }
+
+    // Journal entries: only the owner
+    match /journal_entries/{entryId} {
+      allow read, write: if request.auth != null && request.auth.uid == resource.data.user_id;
+      allow create: if request.auth != null && request.resource.data.user_id == request.auth.uid;
+    }
+
+    // POIs: anyone can read, only admins can write
+    match /pois/{poiId} {
+      allow read: if true;
+      allow write: if request.auth != null && request.auth.token.admin == true;
+    }
+
+    // Crowd telemetry: anyone can write (anonymous telemetry), authenticated can read
+    match /crowd_telemetry/{docId} {
+      allow create, update: if true;
+      allow read: if request.auth != null;
+    }
+
+    // Fair prices: public read, admin write
+    match /fair_prices/{docId} {
+      allow read: if true;
+      allow write: if request.auth != null && request.auth.token.admin == true;
+    }
+
+    // Panchang cache: public read, admin write
+    match /panchang_cache/{date} {
+      allow read: if true;
+      allow write: if request.auth != null && request.auth.token.admin == true;
+    }
+
+    // Social signals: authenticated read, admin write
+    match /social_signals/{signalId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.token.admin == true;
+    }
+
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

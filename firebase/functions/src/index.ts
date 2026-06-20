@@ -20,9 +20,9 @@ if (admin.apps.length === 0) {
 const db = admin.firestore();
 
 // ─── Agents ─────────────────────────────────────────────────────────────
-import { getLLMResponse, LLMModel } from './agents/llmRouter';
+import { getLLMResponse } from './agents/llmRouter';
 import { synthesizeResponse, ConfidenceLevel } from './agents/synthesizer';
-import { parseVoiceIntent, ToolCall } from './agents/intentParser';
+import { parseVoiceIntent as parseVoiceIntentAgent } from './agents/intentParser';
 
 // ─── Search ─────────────────────────────────────────────────────────────
 import { braveSearch } from './search/brave';
@@ -316,7 +316,7 @@ export const parseVoiceIntent = onCall(
       throw new HttpsError('invalid-argument', 'transcribed_text is required');
     }
 
-    const result = await parseVoiceIntent(transcribed_text, current_time_iso);
+    const result = await parseVoiceIntentAgent(transcribed_text, current_time_iso);
     return {
       tts_response: result.ttsResponse,
       confidence: result.confidence,
