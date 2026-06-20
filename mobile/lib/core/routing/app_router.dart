@@ -7,6 +7,7 @@ import '../../features/journal/journal_screen.dart';
 import '../../features/map/map_screen.dart';
 import '../../features/today/today_screen.dart';
 import '../../features/tools/tools_screen.dart';
+import 'shell_screen.dart';
 
 /// The five primary tabs (handoff §1). The Brain acts as the primary app
 /// operator: voice/agent intents call `toggle_tab` to move between these.

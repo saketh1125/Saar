@@ -219,7 +219,7 @@ class _ComposerSheetState extends ConsumerState<_ComposerSheet> {
     final entry = await dao.insert(content: text, mood: _mood);
     // Fire-and-forget the AI reflection; it merges back into SQLite.
     final processor = ref.read(journalProcessingRepositoryProvider);
-    processor.process(content: text).then((r) async {
+    processor.process(text).then((r) async {
       await dao.applyReflection(
         entry.id,
         score: r.score,

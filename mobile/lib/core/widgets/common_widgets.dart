@@ -5,7 +5,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../networking/connectivity.dart';
 import '../theme/app_colors.dart';
-import '../theme/theme_controller.dart';
 import '../../data/models/models.dart';
 
 /// Thin saffron warning banner that slides down when offline (design §4.2).

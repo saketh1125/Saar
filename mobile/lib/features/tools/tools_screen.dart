@@ -3,8 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/theme_controller.dart';
-import '../../data/models/models.dart';
-import '../../data/repositories/repositories.dart';
 import 'scam_shield_sheet.dart';
 
 /// Tab 5 — Device Integrations & Companion Tools (PRD §3.1.4). Hosts the theme

@@ -18,7 +18,7 @@ class KashiThemeData {
 
   const KashiThemeData(this.palette);
 
-  ThemeData toMaterial([ThemeData? base]) {
+  ThemeData toMaterial() {
     final scheme = palette.isDark
         ? ColorScheme.dark(
             primary: palette.accent,
@@ -85,9 +85,6 @@ class KashiThemeData {
 
   TextTheme _buildTextTheme(KashiPalette p) {
     final on = p.onCanvas;
-    // Outfit-style for titles, Inter-style for body. We fall back to system
-    // fonts when the custom families aren't bundled yet; the design system can
-    // be wired up fully later via Google Fonts without touching call sites.
     const display = TextStyle(
       fontFamily: 'Outfit',
       fontWeight: FontWeight.w700,
@@ -115,12 +112,16 @@ class KashiThemeData {
 /// ticks past a phase boundary or the user overrides it.
 class ThemeController extends StateNotifier<KashiThemeData> {
   ThemeController(this._ref) : super(_initial(_ref)) {
-    _clock = _ref.read(systemClockProvider.notifier);
-    _clock.addListener(_onClockTick);
+    _ref
+        .read(themeOverrideProvider.notifier)
+        .addListener((_) => _rebuild());
+    _clockSubscription = _ref.read(systemClockProvider.notifier).stream.listen(
+          (_) => _rebuild(),
+        );
   }
 
   final Ref _ref;
-  late final SystemClock _clock;
+  late final StreamSubscription<DateTime> _clockSubscription;
 
   static KashiThemeData _initial(Ref ref) {
     final override = ref.read(themeOverrideProvider);
@@ -129,11 +130,12 @@ class ThemeController extends StateNotifier<KashiThemeData> {
     return KashiThemeData(_palette(override, isRaining, now));
   }
 
-  void _onClockTick() {
+  void _rebuild() {
     final override = _ref.read(themeOverrideProvider);
     final isRaining = _ref.read(weatherProvider).isRaining;
-    final now = _clock.state;
+    final now = _ref.read(systemClockProvider);
     final palette = _palette(override, isRaining, now);
+    // Rebuild whenever the palette identity or override/rain state changes.
     if (palette.name != state.palette.name) {
       state = KashiThemeData(palette);
     }
@@ -144,10 +146,9 @@ class ThemeController extends StateNotifier<KashiThemeData> {
     bool isRaining,
     DateTime now,
   ) {
-    if (override == ThemeOverride.system) {
-      return _paletteFromPhase(resolvePhase(now, isRaining: isRaining));
-    }
     switch (override) {
+      case ThemeOverride.system:
+        return _paletteFromPhase(resolvePhase(now, isRaining: isRaining));
       case ThemeOverride.sunrise:
         return KashiPalette.sunrise;
       case ThemeOverride.daytime:
@@ -158,8 +159,6 @@ class ThemeController extends StateNotifier<KashiThemeData> {
         return KashiPalette.night;
       case ThemeOverride.monsoon:
         return KashiPalette.monsoon;
-      case ThemeOverride.system:
-        return _paletteFromPhase(resolvePhase(now, isRaining: isRaining));
     }
   }
 
@@ -180,7 +179,7 @@ class ThemeController extends StateNotifier<KashiThemeData> {
 
   @override
   void dispose() {
-    _clock.removeListener(_onClockTick);
+    _clockSubscription.cancel();
     super.dispose();
   }
 }
@@ -205,9 +204,23 @@ class SystemClock extends StateNotifier<DateTime> {
     _timer = Timer.periodic(const Duration(minutes: 1), (_) => state = DateTime.now());
   }
   late final Timer _timer;
+
+  /// A stream that emits the current time whenever it updates, for external
+  /// listeners (e.g. the ThemeController).
+  Stream<DateTime> get stream => streamController.stream;
+  final StreamController<DateTime> streamController =
+      StreamController<DateTime>.broadcast();
+
+  @override
+  set state(DateTime value) {
+    super.state = value;
+    streamController.add(value);
+  }
+
   @override
   void dispose() {
     _timer.cancel();
+    streamController.close();
     super.dispose();
   }
 }

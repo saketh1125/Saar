@@ -80,9 +80,11 @@ class _ExecutionLine extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            done ? '├─' : '├─',
+            done ? '✓ ' : '├─',
             style: TextStyle(
-              color: KashiColors.neonSaffron.withValues(alpha: 0.7),
+              color: done
+                  ? KashiColors.riverJade
+                  : KashiColors.neonSaffron.withValues(alpha: 0.7),
               fontFamily: 'Outfit',
               fontSize: 12,
             ),

@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -71,8 +70,12 @@ class MockPoiRepository implements PoiRepository {
   Future<List<Poi>> byCategory(PoiCategory c) async =>
       _seed.where((p) => p.category == c).toList();
   @override
-  Future<Poi?> byId(String id) async =>
-      _seed.firstWhere((p) => p.id == id, orElse: () => _seed.first);
+  Future<Poi?> byId(String id) async {
+    for (final p in _seed) {
+      if (p.id == id) return p;
+    }
+    return null;
+  }
   @override
   Future<List<Poi>> nearestMainRoads(double lat, double lng) async => kMainRoadNodes;
 }
@@ -299,38 +302,58 @@ final repositoryModeProvider =
     StateNotifierProvider<RepositoryModeController, RepoMode>(
         (ref) => RepositoryModeController());
 
+/// Each provider reads [repositoryModeProvider] so flipping the mode (e.g. from
+/// the Tools tab) switches every feature from mock to live in one move. Until
+/// the live callable client is wired (needs Firebase configured), live mode
+/// also falls back to the mock so the app never breaks.
 final poiRepositoryProvider = Provider<PoiRepository>((ref) {
-  // Live impl will read ref.watch(repositoryModeProvider) and the callable
-  // client; for now both modes resolve to the seeded mock so the app runs.
+  ref.watch(repositoryModeProvider); // re-resolve on mode change
+  // TODO(swap): return LivePoiRepository(ref) once Firebase is configured.
   return MockPoiRepository([...kSeedPois, ...kMainRoadNodes]);
 });
 
 final liveSituationRepositoryProvider = Provider<LiveSituationRepository>(
-    (ref) => MockLiveSituationRepository());
+    (ref) {
+  ref.watch(repositoryModeProvider);
+  return MockLiveSituationRepository();
+});
 
 final itineraryRepositoryProvider =
-    Provider<ItineraryRepository>((ref) => MockItineraryRepository());
+    Provider<ItineraryRepository>((ref) {
+  ref.watch(repositoryModeProvider);
+  return MockItineraryRepository();
+});
 
 final panchangRepositoryProvider =
-    Provider<PanchangRepository>((ref) => MockPanchangRepository());
+    Provider<PanchangRepository>((ref) {
+  ref.watch(repositoryModeProvider);
+  return MockPanchangRepository();
+});
 
 final voiceIntentRepositoryProvider =
-    Provider<VoiceIntentRepository>((ref) => MockVoiceIntentRepository());
+    Provider<VoiceIntentRepository>((ref) {
+  ref.watch(repositoryModeProvider);
+  return MockVoiceIntentRepository();
+});
 
 final crowdDensityRepositoryProvider =
-    Provider<CrowdDensityRepository>((ref) => MockCrowdDensityRepository());
+    Provider<CrowdDensityRepository>((ref) {
+  ref.watch(repositoryModeProvider);
+  return MockCrowdDensityRepository();
+});
 
 final fairPriceRepositoryProvider =
-    Provider<FairPriceRepository>((ref) => MockFairPriceRepository());
+    Provider<FairPriceRepository>((ref) {
+  ref.watch(repositoryModeProvider);
+  return MockFairPriceRepository();
+});
 
 final journalProcessingRepositoryProvider =
-    Provider<JournalProcessingRepository>(
-        (ref) => MockJournalProcessingRepository());
+    Provider<JournalProcessingRepository>((ref) {
+  ref.watch(repositoryModeProvider);
+  return MockJournalProcessingRepository();
+});
 
 // small helper re-exported for widgets that need the seed list directly
 List<Poi> get seedPois => kSeedPois;
 List<Poi> get mainRoadNodes => kMainRoadNodes;
-
-// silence unused import on targets without math in release
-// ignore: unused_element
-double _dist(double a, double b) => sqrt(a * a + b * b);
