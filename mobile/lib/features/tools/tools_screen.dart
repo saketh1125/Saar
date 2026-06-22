@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/media/media_provider_manager.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/theme_controller.dart';
 import 'scam_shield_sheet.dart';
@@ -134,16 +135,16 @@ class _ToolTile extends StatelessWidget {
   }
 }
 
-class _SpotifyCard extends StatefulWidget {
+class _SpotifyCard extends ConsumerWidget {
   const _SpotifyCard();
   @override
-  State<_SpotifyCard> createState() => _SpotifyCardState();
-}
+  Widget build(BuildContext context, WidgetRef ref) {
+    final mediaState = ref.watch(mediaProviderManagerProvider);
+    final spotifyProvider = mediaState.availableProviders
+        .where((p) => p.providerName == 'Spotify')
+        .firstOrNull;
+    final isConnected = spotifyProvider?.isConnected ?? false;
 
-class _SpotifyCardState extends State<_SpotifyCard> {
-  bool _connected = false;
-  @override
-  Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -169,13 +170,19 @@ class _SpotifyCardState extends State<_SpotifyCard> {
           SizedBox(
             width: double.infinity,
             child: FilledButton(
-              onPressed: () => setState(() => _connected = !_connected),
+              onPressed: isConnected
+                  ? () async {
+                      await ref.read(mediaProviderManagerProvider.notifier).disconnectActive();
+                    }
+                  : () async {
+                      if (spotifyProvider != null) {
+                        await ref.read(mediaProviderManagerProvider.notifier).connectProvider(spotifyProvider);
+                      }
+                    },
               style: FilledButton.styleFrom(
-                backgroundColor: _connected ? KashiColors.riverJade : KashiColors.saffronGold,
+                backgroundColor: isConnected ? KashiColors.riverJade : KashiColors.saffronGold,
               ),
-              child: Text(_connected
-                  ? 'Connected as demo_user (Premium)'
-                  : 'Connect Spotify Account'),
+              child: Text(isConnected ? 'Connected (Premium)' : 'Connect Spotify Account'),
             ),
           ),
         ],
@@ -184,16 +191,16 @@ class _SpotifyCardState extends State<_SpotifyCard> {
   }
 }
 
-class _AppleMusicCard extends StatefulWidget {
+class _AppleMusicCard extends ConsumerWidget {
   const _AppleMusicCard();
   @override
-  State<_AppleMusicCard> createState() => _AppleMusicCardState();
-}
+  Widget build(BuildContext context, WidgetRef ref) {
+    final mediaState = ref.watch(mediaProviderManagerProvider);
+    final appleProvider = mediaState.availableProviders
+        .where((p) => p.providerName == 'Apple Music')
+        .firstOrNull;
+    final isConnected = appleProvider?.isConnected ?? false;
 
-class _AppleMusicCardState extends State<_AppleMusicCard> {
-  bool _connected = false;
-  @override
-  Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -214,8 +221,16 @@ class _AppleMusicCardState extends State<_AppleMusicCard> {
           SizedBox(
             width: double.infinity,
             child: OutlinedButton(
-              onPressed: () => setState(() => _connected = !_connected),
-              child: Text(_connected ? 'Signed in (MusicKit)' : 'Sign In with Apple ID'),
+              onPressed: isConnected
+                  ? () async {
+                      await ref.read(mediaProviderManagerProvider.notifier).disconnectActive();
+                    }
+                  : () async {
+                      if (appleProvider != null) {
+                        await ref.read(mediaProviderManagerProvider.notifier).connectProvider(appleProvider);
+                      }
+                    },
+              child: Text(isConnected ? 'Signed in (MusicKit)' : 'Sign In with Apple ID'),
             ),
           ),
         ],
@@ -224,21 +239,27 @@ class _AppleMusicCardState extends State<_AppleMusicCard> {
   }
 }
 
-class _FallbackToggle extends StatefulWidget {
+class _FallbackToggle extends ConsumerWidget {
   const _FallbackToggle();
   @override
-  State<_FallbackToggle> createState() => _FallbackToggleState();
-}
+  Widget build(BuildContext context, WidgetRef ref) {
+    final mediaState = ref.watch(mediaProviderManagerProvider);
+    final youtubeProvider = mediaState.availableProviders
+        .where((p) => p.providerName == 'YouTube')
+        .firstOrNull;
+    final isYoutubeConnected = youtubeProvider?.isConnected ?? false;
 
-class _FallbackToggleState extends State<_FallbackToggle> {
-  bool _on = true;
-  @override
-  Widget build(BuildContext context) {
     return Card(
       child: SwitchListTile(
-        value: _on,
-        onChanged: (v) => setState(() => _on = v),
-        title: const Text('JioSaavn / YouTube Fallback'),
+        value: isYoutubeConnected,
+        onChanged: (v) async {
+          if (v && youtubeProvider != null) {
+            await ref.read(mediaProviderManagerProvider.notifier).connectProvider(youtubeProvider);
+          } else if (!v && isYoutubeConnected) {
+            await ref.read(mediaProviderManagerProvider.notifier).disconnectActive();
+          }
+        },
+        title: const Text('YouTube Fallback'),
         subtitle: Text(
           'Used when premium providers are offline.',
           style: Theme.of(context).textTheme.bodySmall,

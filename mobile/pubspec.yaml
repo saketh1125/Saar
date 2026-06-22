@@ -36,6 +36,10 @@ dependencies:
   just_audio: ^0.9.36
   audio_session: ^0.1.18
 
+  # Media Players
+  spotify_sdk: ^3.0.2
+  youtube_explode_dart: ^2.3.0
+
   # Voice Assistant
   record: ^5.0.0
   flutter_tts: ^3.8.0
