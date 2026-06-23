@@ -1,4 +1,6 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/routing/app_router.dart';
@@ -10,7 +12,10 @@ import 'core/theme/theme_controller.dart';
 /// resolves the palette from the sun's position over Varanasi (+ a monsoon
 /// weather override) and feeds it through [AnimatedTheme] so colours morph over
 /// ~30 minutes around sunset (design §4.11).
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await dotenv.load(fileName: '.env');
+  await Firebase.initializeApp();
   runApp(const ProviderScope(child: KashiNavApp()));
 }
 

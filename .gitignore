@@ -43,6 +43,11 @@ linux/
 # Project docs (root level)
 keynotes/
 
+# Environment variables (secrets)
+.env
+.env.local
+.env.*.local
+
 
 # Node
 node_modules/

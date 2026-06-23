@@ -131,10 +131,9 @@ export const generateItinerary = onCall(
       // Demo fallback
     }
 
-    const { user_id, location, current_time_iso, user_preferences } = request.data;
+    const { location, current_time_iso, user_preferences } = request.data;
 
     const now = new Date(current_time_iso || Date.now());
-    const hour = now.getHours();
     const dateStr = now.toISOString().slice(0, 10);
 
     // Fetch today's panchang for context
@@ -387,7 +386,6 @@ export const getCrowdDensity = onCall(
 
     // Fetch telemetry for this place's geohash
     const now = new Date();
-    const timeBucket = now.toISOString().slice(0, 13);
 
     let placesLiveOccupancy = 0;
     let activeAppInstances = 0;

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/models.dart';
 import '../seed/varanasi_pois.dart';
+import '../sources/firebase_callable_client.dart';
 
 /// Every Cloud Function in `kashi_nav_api_contract.md` maps to one repository
 /// interface. The app talks only to these interfaces; [ModeController] decides
@@ -285,6 +286,90 @@ class MockJournalProcessingRepository implements JournalProcessingRepository {
 }
 
 // ════════════════════════════════════════════════════════════════════════
+// Live implementations (Firebase Cloud Functions)
+// ════════════════════════════════════════════════════════════════════════
+
+class LiveSituationRepositoryImpl implements LiveSituationRepository {
+  LiveSituationRepositoryImpl(this._client);
+  final FirebaseCallableClient _client;
+
+  @override
+  Future<({String text, String confidence, List<DataSource> sources, List<ToolCall> toolCalls})>
+      getLiveSituation({
+    required String query,
+    required double lat,
+    required double lng,
+    bool forceLiveRefresh = false,
+  }) async {
+    return _client.getLiveSituation(
+      query: query,
+      lat: lat,
+      lng: lng,
+      forceLiveRefresh: forceLiveRefresh,
+    );
+  }
+}
+
+class LiveItineraryRepositoryImpl implements ItineraryRepository {
+  LiveItineraryRepositoryImpl(this._client);
+  final FirebaseCallableClient _client;
+
+  @override
+  Future<Itinerary> generate({required double lat, required double lng}) {
+    return _client.generateItinerary(lat: lat, lng: lng);
+  }
+}
+
+class LivePanchangRepositoryImpl implements PanchangRepository {
+  LivePanchangRepositoryImpl(this._client);
+  final FirebaseCallableClient _client;
+
+  @override
+  Future<Panchang> forDate(DateTime date) => _client.fetchPanchang(date);
+}
+
+class LiveVoiceIntentRepositoryImpl implements VoiceIntentRepository {
+  LiveVoiceIntentRepositoryImpl(this._client);
+  final FirebaseCallableClient _client;
+
+  @override
+  Future<VoiceIntent> parse(String transcribedText) {
+    return _client.parseVoiceIntent(transcribedText);
+  }
+}
+
+class LiveCrowdDensityRepositoryImpl implements CrowdDensityRepository {
+  LiveCrowdDensityRepositoryImpl(this._client);
+  final FirebaseCallableClient _client;
+
+  @override
+  Future<CrowdDensity> forPlace(String placeId) {
+    return _client.getCrowdDensity(placeId);
+  }
+}
+
+class LiveFairPriceRepositoryImpl implements FairPriceRepository {
+  LiveFairPriceRepositoryImpl(this._client);
+  final FirebaseCallableClient _client;
+
+  @override
+  Future<FairPriceDirectory> directory(String locale) {
+    return _client.fetchFairPrices(locale);
+  }
+}
+
+class LiveJournalProcessingRepositoryImpl implements JournalProcessingRepository {
+  LiveJournalProcessingRepositoryImpl(this._client);
+  final FirebaseCallableClient _client;
+
+  @override
+  Future<({double score, String label, String reflection, List<String> tags})>
+      process(String content, {double? lat, double? lng}) {
+    return _client.processJournal(content: content, lat: lat, lng: lng);
+  }
+}
+
+// ════════════════════════════════════════════════════════════════════════
 // Mode controller + providers
 // ════════════════════════════════════════════════════════════════════════
 
@@ -314,43 +399,64 @@ final poiRepositoryProvider = Provider<PoiRepository>((ref) {
 
 final liveSituationRepositoryProvider = Provider<LiveSituationRepository>(
     (ref) {
-  ref.watch(repositoryModeProvider);
+  final mode = ref.watch(repositoryModeProvider);
+  if (mode == RepoMode.live) {
+    return LiveSituationRepositoryImpl(FirebaseCallableClient());
+  }
   return MockLiveSituationRepository();
 });
 
 final itineraryRepositoryProvider =
     Provider<ItineraryRepository>((ref) {
-  ref.watch(repositoryModeProvider);
+  final mode = ref.watch(repositoryModeProvider);
+  if (mode == RepoMode.live) {
+    return LiveItineraryRepositoryImpl(FirebaseCallableClient());
+  }
   return MockItineraryRepository();
 });
 
 final panchangRepositoryProvider =
     Provider<PanchangRepository>((ref) {
-  ref.watch(repositoryModeProvider);
+  final mode = ref.watch(repositoryModeProvider);
+  if (mode == RepoMode.live) {
+    return LivePanchangRepositoryImpl(FirebaseCallableClient());
+  }
   return MockPanchangRepository();
 });
 
 final voiceIntentRepositoryProvider =
     Provider<VoiceIntentRepository>((ref) {
-  ref.watch(repositoryModeProvider);
+  final mode = ref.watch(repositoryModeProvider);
+  if (mode == RepoMode.live) {
+    return LiveVoiceIntentRepositoryImpl(FirebaseCallableClient());
+  }
   return MockVoiceIntentRepository();
 });
 
 final crowdDensityRepositoryProvider =
     Provider<CrowdDensityRepository>((ref) {
-  ref.watch(repositoryModeProvider);
+  final mode = ref.watch(repositoryModeProvider);
+  if (mode == RepoMode.live) {
+    return LiveCrowdDensityRepositoryImpl(FirebaseCallableClient());
+  }
   return MockCrowdDensityRepository();
 });
 
 final fairPriceRepositoryProvider =
     Provider<FairPriceRepository>((ref) {
-  ref.watch(repositoryModeProvider);
+  final mode = ref.watch(repositoryModeProvider);
+  if (mode == RepoMode.live) {
+    return LiveFairPriceRepositoryImpl(FirebaseCallableClient());
+  }
   return MockFairPriceRepository();
 });
 
 final journalProcessingRepositoryProvider =
     Provider<JournalProcessingRepository>((ref) {
-  ref.watch(repositoryModeProvider);
+  final mode = ref.watch(repositoryModeProvider);
+  if (mode == RepoMode.live) {
+    return LiveJournalProcessingRepositoryImpl(FirebaseCallableClient());
+  }
   return MockJournalProcessingRepository();
 });
 

@@ -4,8 +4,6 @@
  * Primary source: Drik Panchang API (free, public).
  * Fallback: Static mock data based on typical patterns.
  */
-import axios from 'axios';
-
 interface PanchangRitual {
   name: string;
   location: string;
