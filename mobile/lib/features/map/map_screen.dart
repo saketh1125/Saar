@@ -3,6 +3,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:latlong2/latlong.dart';
 
+import '../../core/location/geofence_service.dart';
 import '../../core/networking/open_route_service.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/solar.dart';
@@ -41,7 +42,47 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _loadPois());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadPois();
+      _initGeofence();
+    });
+  }
+
+  Future<void> _initGeofence() async {
+    final geofence = ref.read(geofenceServiceProvider);
+    await geofence.init();
+    await geofence.start();
+    geofence.onEnter.listen((event) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Near ${event.placeName} — showing checklist…'),
+            duration: const Duration(seconds: 3),
+            action: SnackBarAction(
+              label: 'VIEW',
+              textColor: KashiColors.neonSaffron,
+              onPressed: () {
+                // Navigate to the POI detail
+                final poi = _allPois.firstWhere(
+                  (p) => p.id == event.placeId,
+                  orElse: () => _allPois.first,
+                );
+                setState(() => _selected = poi);
+                showModalBottomSheet(
+                  context: context,
+                  isScrollControlled: true,
+                  backgroundColor: Colors.transparent,
+                  builder: (_) => PoiDetailSheet(
+                    poi: poi,
+                    onNavigate: () => navigateToPoi(poi),
+                  ),
+                );
+              },
+            ),
+          ),
+        );
+      }
+    });
   }
 
   Future<void> _loadPois() async {

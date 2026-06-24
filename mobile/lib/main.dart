@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'core/location/location_permissions.dart';
 import 'core/routing/app_router.dart';
 import 'core/theme/theme_controller.dart';
 
@@ -16,6 +17,10 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await dotenv.load(fileName: '.env');
   await Firebase.initializeApp();
+
+  // Request location permissions early so geofence + navigation work.
+  await ensureLocationPermissions();
+
   runApp(const ProviderScope(child: KashiNavApp()));
 }
 
