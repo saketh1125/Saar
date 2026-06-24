@@ -3,6 +3,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:latlong2/latlong.dart';
 
+import '../../core/networking/open_route_service.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/solar.dart';
 import '../../core/widgets/common_widgets.dart';
@@ -34,6 +35,8 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   bool _escapeActive = false;
   List<LatLng> _escapeRoute = const [];
   bool _refreshing = false;
+  PedestrianRoute? _navRoute;
+  bool _navLoading = false;
 
   @override
   void initState() {
@@ -101,6 +104,53 @@ class _MapScreenState extends ConsumerState<MapScreen> {
     return best;
   }
 
+  Future<void> navigateToPoi(Poi poi) async {
+    setState(() {
+      _navLoading = true;
+      _escapeActive = false;
+      _escapeRoute = const [];
+    });
+
+    final ors = ref.read(orsClientProvider);
+    final userLocation = _mapController.camera.center;
+
+    try {
+      final route = await ors.getPedestrianRoute(
+        start: userLocation,
+        end: poi.location,
+      );
+
+      if (mounted && route != null) {
+        setState(() {
+          _navRoute = route;
+          _navLoading = false;
+        });
+        _mapController.fitCamera(
+          CameraFit.bounds(
+            bounds: LatLngBounds.fromPoints(route.polyline),
+            padding: const EdgeInsets.all(50),
+          ),
+        );
+      } else if (mounted) {
+        setState(() => _navLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not compute route. Check ORS API key.')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _navLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Routing error: $e')),
+        );
+      }
+    }
+  }
+
+  void clearNavigation() {
+    setState(() => _navRoute = null);
+  }
+
   @override
   Widget build(BuildContext context) {
     final visiblePois = _allPois.where((p) => _enabled.contains(p.category)).toList();
@@ -135,6 +185,16 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                     ),
                   ],
                 ),
+              if (_navRoute != null)
+                PolylineLayer(
+                  polylines: [
+                    Polyline(
+                      points: _navRoute!.polyline,
+                      color: KashiColors.riverJade,
+                      strokeWidth: 5,
+                    ),
+                  ],
+                ),
               MarkerLayer(
                 markers: [
                   for (final poi in visiblePois)
@@ -149,7 +209,10 @@ class _MapScreenState extends ConsumerState<MapScreen> {
                             context: context,
                             isScrollControlled: true,
                             backgroundColor: Colors.transparent,
-                            builder: (_) => PoiDetailSheet(poi: poi),
+                            builder: (_) => PoiDetailSheet(
+                              poi: poi,
+                              onNavigate: () => navigateToPoi(poi),
+                            ),
                           );
                         },
                         child: _PoiMarker(poi: poi, selected: _selected?.id == poi.id),
@@ -218,6 +281,69 @@ class _MapScreenState extends ConsumerState<MapScreen> {
               onPressed: _toggleEscape,
             ),
           ),
+
+          // Navigation info bar when route is active.
+          if (_navRoute != null)
+            Positioned(
+              left: 16,
+              right: 16,
+              bottom: 24,
+              child: Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: KashiColors.nightCanvas.withValues(alpha: 0.95),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: KashiColors.riverJade.withValues(alpha: 0.5)),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(Icons.directions_walk, color: KashiColors.riverJade),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            '${_navRoute!.distanceText} · ${_navRoute!.durationText}',
+                            style: const TextStyle(
+                              color: KashiColors.sunriseCanvas,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close, color: KashiColors.neonSaffron),
+                          onPressed: clearNavigation,
+                        ),
+                      ],
+                    ),
+                    if (_navRoute!.steps.isNotEmpty)
+                      Text(
+                        _navRoute!.steps.first.instruction ?? 'Follow the route',
+                        style: TextStyle(
+                          color: KashiColors.sunriseCanvas.withValues(alpha: 0.7),
+                          fontSize: 12,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                  ],
+                ),
+              ),
+            ),
+
+          // Loading indicator while computing route.
+          if (_navLoading)
+            const Positioned(
+              left: 0,
+              right: 0,
+              bottom: 24,
+              child: Center(
+                child: CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation(KashiColors.riverJade),
+                ),
+              ),
+            ),
         ],
       ),
     );
@@ -238,7 +364,10 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => PoiDetailSheet(poi: hit),
+      builder: (_) => PoiDetailSheet(
+        poi: hit,
+        onNavigate: () => navigateToPoi(hit),
+      ),
     );
   }
 }

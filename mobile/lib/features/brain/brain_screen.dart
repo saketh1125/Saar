@@ -4,6 +4,7 @@ import 'package:flutter_tts/flutter_tts.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../core/networking/connectivity.dart';
+import '../../core/stt/groq_stt_service.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/widgets/common_widgets.dart';
 import '../../core/widgets/execution_feed.dart';
@@ -155,25 +156,48 @@ class _BrainScreenState extends ConsumerState<BrainScreen> {
       _voiceParsing = false;
       _voiceTranscript = '';
     });
-    // Simulated capture; real STT via Groq/Whisper lives behind the voice
-    // intent repository (design §4.3 step 4).
-    const sample = 'Wake me up at 4:30 AM with morning flute music';
-    final words = sample.split(' ');
-    for (var i = 0; i < words.length; i++) {
-      Future.delayed(Duration(milliseconds: 280 * (i + 1)), () {
-        if (mounted && _voiceListening) {
-          setState(() => _voiceTranscript = words.sublist(0, i + 1).join(' '));
-        }
-      });
+    _startRecording();
+  }
+
+  Future<void> _startRecording() async {
+    final stt = ref.read(groqSttServiceProvider);
+    try {
+      await stt.startRecording();
+      // Auto-stop after 10 seconds max
+      await Future.delayed(const Duration(seconds: 10));
+      if (_voiceListening && mounted) {
+        await _stopRecording();
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _voiceListening = false;
+          _voiceOpen = false;
+        });
+      }
     }
-    Future.delayed(Duration(milliseconds: 280 * (words.length + 1)), () {
-      if (!mounted) return;
-      setState(() {
-        _voiceListening = false;
-        _voiceParsing = true;
-      });
-      _parseVoice(sample);
+  }
+
+  Future<void> _stopRecording() async {
+    if (!_voiceListening) return;
+    setState(() {
+      _voiceListening = false;
+      _voiceParsing = true;
     });
+
+    final stt = ref.read(groqSttServiceProvider);
+    final text = await stt.stopAndTranscribe();
+
+    if (text.isEmpty || !mounted) {
+      setState(() {
+        _voiceParsing = false;
+        _voiceOpen = false;
+      });
+      return;
+    }
+
+    setState(() => _voiceTranscript = text);
+    _parseVoice(text);
   }
 
   Future<void> _parseVoice(String text) async {
@@ -252,6 +276,7 @@ class _BrainScreenState extends ConsumerState<BrainScreen> {
         transcript: _voiceTranscript,
         listening: _voiceListening,
         parsing: _voiceParsing,
+        onTap: _voiceListening ? _stopRecording : null,
       ),
     );
   }

@@ -10,14 +10,18 @@ class VoiceOverlay extends StatelessWidget {
     required this.transcript,
     required this.listening,
     required this.parsing,
+    this.onTap,
   });
   final String transcript;
   final bool listening;
   final bool parsing;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return GestureDetector(
+      onTap: listening ? onTap : null,
+      child: Container(
       decoration: BoxDecoration(
         color: KashiColors.nightCanvas.withValues(alpha: 0.9),
         borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
@@ -49,7 +53,7 @@ class VoiceOverlay extends StatelessWidget {
           else
             Text(
               transcript.isEmpty
-                  ? (listening ? 'Listening…' : 'Tap the mic and speak')
+                  ? (listening ? 'Tap to stop' : 'Tap the mic and speak')
                   : '"$transcript"',
               textAlign: TextAlign.center,
               style: TextStyle(
@@ -60,6 +64,7 @@ class VoiceOverlay extends StatelessWidget {
               ),
             ),
         ],
+      ),
       ),
     );
   }

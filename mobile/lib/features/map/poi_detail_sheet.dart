@@ -10,8 +10,9 @@ import '../../data/repositories/repositories.dart';
 /// 3-sentence AI summary, navigation + audio-guide buttons, an expandable AI
 /// source verification list, and a Crowd Dial (§4.5).
 class PoiDetailSheet extends ConsumerStatefulWidget {
-  const PoiDetailSheet({super.key, required this.poi});
+  const PoiDetailSheet({super.key, required this.poi, this.onNavigate});
   final Poi poi;
+  final VoidCallback? onNavigate;
 
   @override
   ConsumerState<PoiDetailSheet> createState() => _PoiDetailSheetState();
@@ -130,12 +131,17 @@ class _PoiDetailSheetState extends ConsumerState<PoiDetailSheet> {
                       backgroundColor: KashiColors.saffronGold,
                       foregroundColor: Colors.white,
                     ),
-                    onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Pedestrian route via OpenRouteService '
-                            '(needs live ORS key to compute).'),
-                      ),
-                    ),
+                    onPressed: widget.onNavigate != null
+                        ? () {
+                            widget.onNavigate!();
+                            Navigator.of(context).pop();
+                          }
+                        : () => ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Pedestrian route via OpenRouteService '
+                                    '(needs live ORS key to compute).'),
+                              ),
+                            ),
                   ),
                 ),
                 const SizedBox(width: 12),

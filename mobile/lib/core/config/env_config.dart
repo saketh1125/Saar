@@ -21,8 +21,9 @@ class EnvConfig {
   // ── Media ─────────────────────────────────────────────────────────────
   static String get spotifyClientId => dotenv.env['SPOTIFY_CLIENT_ID'] ?? '';
 
-  // ── Maps ──────────────────────────────────────────────────────────────
+  // ── Maps / Routing ─────────────────────────────────────────────────────
   static String get osmUserAgent => dotenv.env['OSM_USER_AGENT'] ?? 'kashi-nav/0.1';
+  static String get orsApiKey => dotenv.env['ORS_API_KEY'] ?? '';
 
   // ── Helpers ───────────────────────────────────────────────────────────
 
@@ -42,5 +43,6 @@ class EnvConfig {
         'EXA_API_KEY': exaApiKey.isNotEmpty,
         'TAVILY_API_KEY': tavilyApiKey.isNotEmpty,
         'SPOTIFY_CLIENT_ID': spotifyClientId.isNotEmpty,
+        'ORS_API_KEY': orsApiKey.isNotEmpty,
       };
 }
